@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Reference papers (copyright, do not publish)
+confer/
+
+# macOS
+.DS_Store

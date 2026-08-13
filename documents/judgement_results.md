@@ -98,10 +98,55 @@ $$\theta_d(t) = \mathrm{atan2}\big(\dot v_d\cdot e_2,\ -\dot v_d\cdot e_1\big)$$
 
 ---
 
+## 追補: 論文準拠の抽出方法への切り替えと、f_d方向への転換(2026-08-13)
+
+### 抽出方法の刷新
+
+`confer/OAD.pdf`(Yamazaki et al. 2026 本文)のMethods B節を直接確認し、1v1イベント(論文の言う「ドリブルイベント」)の正式な抽出条件を確認した:
+
+> (i) event duration > 0.5s; (ii) 両者の正味変位 > 5m; (iii) アタッカーはGKでない; (iv) イベント開始時、r(ディフェンダー方向)とアタッカー→相手ゴール方向のなす角 < **60°**; (v) 最近接相手選手がイベント内で不変
+
+これはTacklingGame起点(v1)とは異なり、**ボール保持の開始を起点に、結果(タックル成立など)によらず全ての1v1局面を母集団に含める**方式。`scripts/extract_dribble_events.py`に実装(idsse-dataにはDataStadium相当の個人単位ボール保持ログが無いため、`ball_owning_team`+ボール近接選手のプロキシで代替)。角度閾値は当初30°で実装していたが、論文の実際の値60°に修正した。
+
+**抽出結果(3試合、`scripts/judgement_v2.py`)**: 224イベント、継続時間 平均2.65秒・中央値2.28秒。先行研究の平均(約2.5秒、18,088イベント)と非常に近く、抽出方法の妥当性を裏付ける。
+
+### θ_d(t) vs d(t): 再確認しても相関なし
+
+新方式でもSpearman相関(d, θ_d) = **0.040**、ほぼ無相関のまま。v1で疑っていた選択バイアス(タックル起点)を解消しても傾向は出なかった。
+
+### 転換点: |a_d(t)|(f_dのプロキシ) vs d(t)には明確な相関
+
+θ_dではなく**駆動力の"大きさ"**(=f_dに相当する量、SG平滑化後の加速度の大きさ)とd(t)の関係を見たところ:
+
+- Spearman相関(d, |a_d|) = **-0.390**(224イベント版でも再現、v1の暫定版-0.368から微増)
+- ビン中央値は、d≈1-2mで約3.3 m/s²、d≈20mで1 m/s²未満まで、**ほぼ単調に減少**
+
+「間合いによらずディフェンダーは常にアタッカー方向へ向かおうとする(θ_dはほぼ一定)が、間合いが縮まるほど強く踏み込む(f_dが増大する)」という解釈に、明確なデータ的裏付けが得られた。
+
+### 新規性の確認: 著者自身がf_p, τ_pの"定数仮定"を限界として明言
+
+`confer/OAD.pdf` Discussion「Limitations」節(p.8)より:
+
+> "In our theoretical framework, all but angle parameters are fixed at the start of each event, likely determined by preceding events, followed by the choice of θ_a and θ_d. Although this assumption is plausible over short timescales and broadly supported by the data, **it would benefit from additional empirical validation**."
+
+θ_pだけでなく、**f_p, τ_pもイベント内で固定という仮定を、著者自身が「要検証」と明言**している。したがって$f_d(d(t))$への拡張は、θ_d案と同格の「先行研究が自ら残した空白を埋める」novelty主張が可能。
+
+### 研究方針の転換
+
+以上より、**主仮説をθ_d(d(t))からf_d(d(t))に転換する**。H1は以下のように改訂される:
+
+$$H_1':\ \text{間合い}d(t)\text{が縮まるにつれて、}f_d\text{(ディフェンダーの駆動力の大きさ)は増加する}$$
+
+θ_dについては「間合いによらずほぼ一定」という副次的知見として位置づける。
+
+---
+
 ## 参考: 実装ファイル
 
 | ファイル | 内容 |
 |---|---|
-| `scripts/judgement1_distance_variation.py` | 判定①(d(t)の重ね書き・変動幅の分布) |
-| `scripts/judgement2_instantaneous_theta.py` | 判定②(加速度平滑化・瞬間θ_d(t)プロキシの実現可能性) |
-| `scripts/judgement3_correlation.py` | 判定③(d(t) vs θ_d(t)のプールした散布図・相関) |
+| `scripts/judgement1_distance_variation.py` | 判定①(d(t)の重ね書き・変動幅の分布)、TacklingGame起点(v1) |
+| `scripts/judgement2_instantaneous_theta.py` | 判定②(加速度平滑化・瞬間θ_d(t)プロキシの実現可能性)、TacklingGame起点(v1) |
+| `scripts/judgement3_correlation.py` | 判定③(d(t) vs θ_d(t)のプールした散布図・相関)、TacklingGame起点(v1) |
+| `scripts/extract_dribble_events.py` | 論文準拠5条件によるドリブルイベント抽出(v2) |
+| `scripts/judgement_v2.py` | v2抽出による判定①・θ_d相関・\|a_d\|(f_dプロキシ)相関の再検証 |

@@ -4,6 +4,10 @@
 
 ---
 
+> **改訂メモ(2026-08-13)**: 判定①〜③のパイロット検証(`documents/judgement_results.md`参照)の結果、主仮説を$\theta_d(d(t))$から$f_d(d(t))$(駆動力の大きさの動的化)へ転換した。詳細と根拠は2.2節および`judgement_results.md`「追補」を参照。$\theta_d$一定仮定の緩和という当初の枠組み(1〜2節)は背景として残すが、以降の実装(4節以降)は$f_d$を主軸に読み替える。
+
+---
+
 ## 1. 研究背景
 
 ### 1.1 出発点となるモデル(OADモデル)
@@ -47,13 +51,23 @@ $\theta_a,\theta_d$を定数とする仮定は、モデルを解析的に扱い�
 
 ## 2. 研究の目的と仮説
 
-### 2.1 目的
+### 2.1 目的(改訂版)
 
-$\theta_d$を**時間不変の定数**として扱うOADモデルの仮定を緩和し、**間合い$d(t)=\|\mathbf{r}_d(t)-\mathbf{r}_a(t)\|$の関数**として動的に変化させるモデル拡張を提案し、実データでその妥当性を検証する。
+OADモデルは$\theta_p,\tau_p,f_p$の3つとも、1イベントにつき時間不変の定数として推定する。当初は$\theta_d$の定数仮定の緩和を主眼としていたが、パイロット検証(3節、`judgement_results.md`)を経て、**$f_d$(ディフェンダーの駆動力の大きさ)を間合い$d(t)=\|\mathbf{r}_d(t)-\mathbf{r}_a(t)\|$の関数として動的化する**方向へ主眼を移した。
 
-### 2.2 仮説
+$$\dot{\mathbf{v}}_d = -\frac{\mathbf{v}_d}{\tau_d} + f_d(d(t))\left[-\cos\theta_d\,\mathbf{e}_1(\mathbf{r}_a,\mathbf{r}_d) + \sin\theta_d\,\mathbf{e}_2(\mathbf{r}_a,\mathbf{r}_d)\right]$$
 
-$$H_1:\ \text{間合い}d(t)\text{が縮まるにつれて、}\theta_d\text{は平行戦略}(\theta_a+\theta_d\to\pm\pi)\text{から積極戦略}(\theta_d\to0)\text{へシフトする}$$
+### 2.2 仮説(改訂版)
+
+$$H_1':\ \text{間合い}d(t)\text{が縮まるにつれて、}f_d\text{(ディフェンダーの駆動力の大きさ)は増加する}$$
+
+$$H_1\ (\text{当初仮説、副次的知見として保持}):\ \theta_d\text{は間合いによらずほぼ一定である(積極戦略側、}\theta_d\approx0\text{付近)}$$
+
+**転換の経緯**: 3節の判定①〜③をTacklingGameイベント起点(v1)で実施したところ、θ_d(t)とd(t)の相関はほぼ0(Spearman -0.003)だった。選択バイアスを疑い、先行研究(Yamazaki et al. 2026)のMethods B節に準拠した5条件抽出(v2、ボール保持開始を起点に結果によらず1v1局面を抽出)に切り替えて再検証したが、θ_d相関は依然ほぼ0(Spearman 0.040)のままだった。一方、θ_dの代わりに加速度の大きさ(f_dのプロキシ)とd(t)の相関を見たところ、Spearman -0.39という明確な負の相関が得られた(d≈1-2mで中央値約3.3 m/s²、d≈20mで1 m/s²未満まで単調減少)。
+
+**novelty上の位置づけ**: 先行研究(`confer/OAD.pdf`)Discussion「Limitations」節は、"all but angle parameters are fixed at the start of each event... it would benefit from additional empirical validation" と明言しており、$\tau_p,f_p$を定数とする仮定は著者自身が検証課題として残している。したがって$f_d(d(t))$への拡張は、θ_d案と同格の「先行研究が自ら残した空白を埋める」novelty主張が可能。
+
+詳細な検証過程・数値・図は`documents/judgement_results.md`を参照。
 
 ---
 
