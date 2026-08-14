@@ -14,3 +14,6 @@ confer/
 
 # macOS
 .DS_Store
+
+# Claude Code local session state
+.claude/
