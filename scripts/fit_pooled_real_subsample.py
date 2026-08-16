@@ -9,6 +9,7 @@ H1'(間合いが縮まるほどf_dが増加する、つまりf_d0 > f_d_inf)を�
 (ローカルでの目安: 10イベントで約20分、50イベントで概ね1.5〜2時間)。
 """
 
+import sys
 import time
 
 import numpy as np
@@ -19,8 +20,11 @@ from fit_pooled_dynamic_fd import fit_pooled, pooled_objective, fit_inner
 
 MATCH_IDS = ["J03WPY", "J03WMX", "J03WN1"]
 N_SUBSAMPLE = 50
-SEED = 42
-OUT_JSON = "/Users/ryuya/dev/dd-oad/documents/pooled_real_result.json"
+# SEED: サブサンプルの選び方(再現性チェック用に上書き可能)。
+# OUT_JSON: 出力先(別シードの結果で上書きしないよう別ファイルにする)。
+# 使い方: uv run python fit_pooled_real_subsample.py [SEED] [OUT_JSON]
+SEED = int(sys.argv[1]) if len(sys.argv) > 1 else 42
+OUT_JSON = sys.argv[2] if len(sys.argv) > 2 else "/Users/ryuya/dev/dd-oad/documents/pooled_real_result.json"
 
 
 def main():
