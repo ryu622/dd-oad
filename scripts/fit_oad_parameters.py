@@ -85,6 +85,21 @@ def defender_rhs(t, state, tau_d, f_d, theta_d, ax_interp, ay_interp):
     return [vxd, vyd, -vxd / tau_d + drive_x, -vyd / tau_d + drive_y]
 
 
+class ShiftedInterp:
+    """t_shift分ずらして評価するCubicSplineのラッパー。
+
+    ラムダだとmultiprocessingでpickle化できないため、複数プロセスに
+    prepped辞書を渡して並列処理するには、この形の(picklableな)クラスが必要。
+    """
+
+    def __init__(self, spline, shift):
+        self.spline = spline
+        self.shift = shift
+
+    def __call__(self, t):
+        return self.spline(t + self.shift)
+
+
 def prepare_event(ev, period_frames, idx_by_id, attacker, defender):
     padded_frames, core_lo, core_hi = get_padded_frames(period_frames, idx_by_id, ev.frames)
 
@@ -103,8 +118,8 @@ def prepare_event(ev, period_frames, idx_by_id, attacker, defender):
     ay_interp_full = CubicSpline(t_full, ya_s)
     t_shift = t_full[core_lo]
 
-    ax_interp = lambda t: ax_interp_full(t + t_shift)
-    ay_interp = lambda t: ay_interp_full(t + t_shift)
+    ax_interp = ShiftedInterp(ax_interp_full, t_shift)
+    ay_interp = ShiftedInterp(ay_interp_full, t_shift)
 
     t_core = t_full[core_lo : core_hi + 1] - t_shift
     xd_obs = xd_s[core_lo : core_hi + 1]
@@ -122,7 +137,30 @@ def prepare_event(ev, period_frames, idx_by_id, attacker, defender):
         "state0": state0,
         "ax_interp": ax_interp,
         "ay_interp": ay_interp,
+        # 生の配列も保持しておく。scipyのCubicSplineは内部にモジュール参照を持ち
+        # pickle化できないため(multiprocessingで使えない)、プロセス境界を越える際は
+        # これらの配列だけを渡し、ワーカー側でスプラインを再構築する(to_picklable/rebuild_interp参照)。
+        "t_full": t_full,
+        "xa_s": xa_s,
+        "ya_s": ya_s,
+        "t_shift": t_shift,
     }
+
+
+def to_picklable(prepped):
+    """prepped辞書からpickle不能なCubicSpline系オブジェクトを除いた版を返す
+    (multiprocessingでワーカーに渡す用)。"""
+    return {k: v for k, v in prepped.items() if k not in ("ax_interp", "ay_interp")}
+
+
+def rebuild_interp(prepped_picklable):
+    """to_picklableで落とした ax_interp/ay_interp を、ワーカープロセス内で再構築する。"""
+    p = dict(prepped_picklable)
+    ax_full = CubicSpline(p["t_full"], p["xa_s"])
+    ay_full = CubicSpline(p["t_full"], p["ya_s"])
+    p["ax_interp"] = ShiftedInterp(ax_full, p["t_shift"])
+    p["ay_interp"] = ShiftedInterp(ay_full, p["t_shift"])
+    return p
 
 
 def simulate(params, prepped):
