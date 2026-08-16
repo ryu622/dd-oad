@@ -169,6 +169,10 @@ def fit_pooled(prepped_list, seed=0, verbose=True, checkpoint_path=None, n_worke
             popsize=OUTER_POPSIZE,
             tol=1e-3,
             callback=save_checkpoint if checkpoint_path else None,
-            polish=True,
+            # polish(L-BFGS-B)は実データ実行で、DEが既に収束済みの後に
+            # 数百回追加評価してほぼ値を動かさないまま30分以上を浪費し、
+            # かつcallbackが呼ばれないため進捗が失われる原因になった。
+            # 収束後の追加評価に見合う改善が無いため無効化する。
+            polish=False,
         )
     return res.x, res.fun
