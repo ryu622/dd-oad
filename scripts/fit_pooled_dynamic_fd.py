@@ -72,9 +72,13 @@ def pooled_objective(shared_params, prepped_list, seed=0):
     return total / len(prepped_list)
 
 
-def fit_pooled(prepped_list, seed=0, verbose=True):
+def fit_pooled(prepped_list, seed=0, verbose=True, checkpoint_path=None):
+    """checkpoint_path を指定すると、世代ごとに現時点の最良推定値をJSONへ書き出す。
+    実行が途中で中断されても、直前の世代までの最良値がファイルに残る。
+    """
     bounds = [FD0_BOUNDS, FDINF_BOUNDS, D0_BOUNDS]
     n_eval = {"count": 0}
+    n_gen = {"count": 0}
 
     def obj(shared):
         n_eval["count"] += 1
@@ -87,6 +91,32 @@ def fit_pooled(prepped_list, seed=0, verbose=True):
             )
         return val
 
+    def save_checkpoint(xk, convergence):
+        n_gen["count"] += 1
+        if checkpoint_path is None:
+            return
+        import json
+        f_d0, f_d_inf, d0 = xk
+        err = pooled_objective(xk, prepped_list, seed=seed)
+        with open(checkpoint_path, "w") as f:
+            json.dump(
+                {
+                    "generation": n_gen["count"],
+                    "n_eval": n_eval["count"],
+                    "n_events": len(prepped_list),
+                    "f_d0": float(f_d0),
+                    "f_d_inf": float(f_d_inf),
+                    "d0": float(d0),
+                    "mean_error": float(err),
+                    "convergence": float(convergence),
+                    "status": "in_progress",
+                },
+                f,
+                indent=2,
+            )
+        if verbose:
+            print(f"  [checkpoint saved] generation={n_gen['count']} -> {checkpoint_path}", flush=True)
+
     res = differential_evolution(
         obj,
         bounds,
@@ -94,6 +124,7 @@ def fit_pooled(prepped_list, seed=0, verbose=True):
         maxiter=OUTER_MAXITER,
         popsize=OUTER_POPSIZE,
         tol=1e-3,
+        callback=save_checkpoint if checkpoint_path else None,
         polish=True,
     )
     return res.x, res.fun

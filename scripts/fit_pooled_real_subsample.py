@@ -65,7 +65,9 @@ def main():
     print(f"d_mean range across events: {min(d_means):.2f} - {max(d_means):.2f} m\n")
 
     t0 = time.time()
-    (f_d0, f_d_inf, d0), err = fit_pooled(prepped_list, seed=0, verbose=True)
+    (f_d0, f_d_inf, d0), err = fit_pooled(
+        prepped_list, seed=0, verbose=True, checkpoint_path=OUT_JSON
+    )
     elapsed = time.time() - t0
 
     print(f"\n=== POOLED FIT ON REAL DATA (n={len(prepped_list)}, {elapsed/60:.1f} min) ===")
@@ -90,6 +92,7 @@ def main():
     with open(OUT_JSON, "w") as f:
         json.dump(
             {
+                "status": "completed",
                 "n_events": len(prepped_list),
                 "f_d0": float(f_d0),
                 "f_d_inf": float(f_d_inf),
@@ -101,7 +104,7 @@ def main():
             f,
             indent=2,
         )
-    print(f"saved to {OUT_JSON}")
+    print(f"saved to {OUT_JSON} (status=completed)")
 
 
 if __name__ == "__main__":
